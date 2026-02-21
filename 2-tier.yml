@@ -1,0 +1,62 @@
+---
+- name: deployment of nginx webserver
+  hosts: webserver
+  become: yes
+  vars:
+    web_pkg: nginx
+    php_pkg:
+      - php
+      - php-fpm
+    web_service: nginx
+    php_service: php-fpm
+    web_default_file: /usr/share/nginx/html
+  tasks:
+    - name: install webserver
+      ansible.builtin.dnf:
+        name: "{{ web_pkg }}"
+        state: present
+
+    - name: install php
+      ansible.builtin.dnf:
+        name: "{{ php_pkg }}"
+        state: present
+
+    - name: start and enable webserver
+      ansible.builtin.systemd:
+        name: "{{ web_service }}"
+        state: started
+        enabled: true
+
+    - name: start and enable php
+      ansible.builtin.systemd:
+        name: "{{ php_service }}"
+        state: started
+        enabled: true
+
+    - name: deploy html page on webserver
+      ansible.builtin.copy:
+        dest: "{{ web_default_file }}/index.html"
+        content: "<h1>Welcome to Ansible which is running on {{ inventory_hostname }}</h1>"
+
+# DB Server
+- name: deployment of db server
+  hosts: dbserver
+  become: yes
+  vars:
+    db_pkg: mariadb-server
+    db_service: mariadb
+  tasks:
+    - name: install dbserver
+      ansible.builtin.dnf:
+        name: "{{ db_pkg }}"
+        state: present
+
+    - name: start and enable dbserver
+      ansible.builtin.systemd:
+        name: "{{ db_service }}"
+        state: started
+        enabled: true
+
+    - name: create database
+      ansible.builtin.shell: |
+        mysql -u root -e "CREATE DATABASE mydatabase;"
